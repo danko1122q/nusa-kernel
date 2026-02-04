@@ -1,0 +1,17 @@
+# Rust support for NUSA, main package
+
+[package]
+name = "nusa"
+version = "0.1.0"
+edition = "2024"
+description = """
+Rust interface to NUSA
+"""
+license = "MIT"
+
+[dependencies.nusa-sys]
+version = "0.1.0"
+path = "../../rust/nusa-sys"
+
+[dependencies.log]
+version = "0.4.27"

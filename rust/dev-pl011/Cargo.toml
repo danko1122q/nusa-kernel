@@ -1,0 +1,20 @@
+# Rust support for NUSA, main package
+
+[package]
+name = "dev-pl011"
+version = "0.1.0"
+edition = "2024"
+description = """
+Rust PL011 uart driver for NUSA.
+"""
+license = "MIT"
+
+[dependencies.nusa]
+version = "0.1.0"
+path = "../nusa"
+
+[dependencies.log]
+version = "0.4.27"
+
+[dependencies.safe-mmio]
+version = "0.2.5"
