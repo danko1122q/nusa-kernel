@@ -560,4 +560,4 @@ static void minip_init(uint level) {
 }
 
 
-LK_INIT_HOOK(minip, minip_init, LK_INIT_LEVEL_THREADING);
+NUSA_INIT_HOOK(minip, minip_init, NUSA_INIT_LEVEL_THREADING);

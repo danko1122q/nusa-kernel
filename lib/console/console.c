@@ -44,7 +44,7 @@
 
 #define WHITESPACE " \t"
 
-// Pager configuration - dikurangi agar lebih rapi
+// Pager configuration
 #define PAGER_LINES_PER_PAGE 18
 #define MAX_PAGER_LINES 1000
 
@@ -101,7 +101,7 @@ static int cmd_repeat(int argc, const console_cmd_args *argv);
 STATIC_COMMAND_START
 STATIC_COMMAND("help", "this list", &cmd_help)
 STATIC_COMMAND_MASKED("help", "this list", &cmd_help_panic, CMD_AVAIL_PANIC)
-STATIC_COMMAND("echo", "print arguments to console", &cmd_echo) // Tambahkan deskripsi
+STATIC_COMMAND("echo", "print arguments to console", &cmd_echo)
 STATIC_COMMAND("clear", "clear screen and show banner", &cmd_clear)
 #if LK_DEBUGLEVEL > 1
 STATIC_COMMAND("test", "test the command processor", &cmd_test)
@@ -271,7 +271,6 @@ static int read_debug_line(const char **outbuffer, void *cookie) {
     console_t *con = (console_t *)cookie;
     char *buffer = con->debug_buffer;
     
-    // Pastikan buffer kosong di awal
     memset(buffer, 0, LINE_LEN);
 
     for (;;) {
@@ -282,15 +281,14 @@ static int read_debug_line(const char **outbuffer, void *cookie) {
             if (c == '\r' || c == '\n') {
                 if (con->echo) putchar('\n');
                 goto done;
-            } else if (c == 0x7f || c == 0x8) { // Backspace
+            } else if (c == 0x7f || c == 0x8) {
                 if (pos > 0) {
                     pos--;
                     fputs("\b \b", stdout);
                 }
-            } else if (c == 0x1b) { // Escape sequence
+            } else if (c == 0x1b) {
                 escape_level = 1;
             } else if (pos < (LINE_LEN - 1)) {
-                // Karakter biasa
                 buffer[pos++] = c;
                 if (con->echo) putchar(c);
             }
@@ -298,8 +296,6 @@ static int read_debug_line(const char **outbuffer, void *cookie) {
             if (c == '[') escape_level = 2;
             else escape_level = 0;
         } else if (escape_level == 2) {
-            // Handle arrow keys (A=Up, B=Down, C=Right, D=Left)
-            // Logic history kamu bisa ditaruh di sini
             escape_level = 0; 
         }
     }
@@ -675,8 +671,6 @@ void console_start(console_t *con) {
 
     console_set_current(con);
 
-    // Langsung tampilkan banner tanpa clear (agar startup cepat)
-    // Clear hanya saat user minta (command clear atau keluar dari help)
     display_banner();
 
     while (command_loop(con, &read_debug_line, con, true, false) == NO_ERROR)
@@ -775,15 +769,14 @@ static void display_banner(void) {
     printf("\n");
 }
 
-// Clear screen properly - kompatibel dengan BIOS/QEMU
+// Clear screen - gunakan form feed (\f) atau kombinasi escape sequences
 static void clear_screen(void) {
-    // Print 60 newlines - balance antara kecepatan dan efektivitas clear
-    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-           "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-           "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    // Coba beberapa metode untuk kompatibilitas maksimal
+    printf("\033c");  // Reset terminal (ESC c)
+    fflush(stdout);
 }
 
-// Pager structure untuk scrollable output - DISEDERHANAKAN
+// Pager structure
 typedef struct {
     char **lines;
     int total_lines;
@@ -791,7 +784,7 @@ typedef struct {
     int lines_per_page;
 } pager_t;
 
-// Print separator line - hanya menggunakan karakter ASCII sederhana
+// Print separator line
 static void print_separator(int width) {
     for (int i = 0; i < width; i++) {
         putchar('-');
@@ -799,7 +792,7 @@ static void print_separator(int width) {
     putchar('\n');
 }
 
-// Display status bar - format sederhana tanpa ANSI codes
+// Display status bar
 static void display_status_bar(pager_t *pager) {
     int displayed_end = pager->current_line + pager->lines_per_page;
     if (displayed_end > pager->total_lines) {
@@ -813,27 +806,24 @@ static void display_status_bar(pager_t *pager) {
     print_separator(78);
 }
 
-// Display current page - tanpa clear screen, hanya print
+// Display current page
 static void display_page(pager_t *pager) {
     int end_line = pager->current_line + pager->lines_per_page;
     if (end_line > pager->total_lines) {
         end_line = pager->total_lines;
     }
     
-    // Print lines untuk halaman ini
     for (int i = pager->current_line; i < end_line; i++) {
         printf("%s\n", pager->lines[i]);
     }
     
-    // Tampilkan status bar
     display_status_bar(pager);
 }
 
-// Run pager - versi sederhana tanpa ANSI escape codes
+// Run pager
 static void run_pager(pager_t *pager) {
     bool quit = false;
     
-    // Tampilkan halaman pertama
     display_page(pager);
     
     while (!quit) {
@@ -841,7 +831,7 @@ static void run_pager(pager_t *pager) {
         if (c < 0) continue;
         
         switch (c) {
-            case ' ':  // Space - page down
+            case ' ':
             case 'd':
             case '\n':
             case '\r':
@@ -858,7 +848,7 @@ static void run_pager(pager_t *pager) {
                 }
                 break;
                 
-            case 'b':  // Page up
+            case 'b':
             case 'u':
                 if (pager->current_line > 0) {
                     pager->current_line -= pager->lines_per_page;
@@ -870,28 +860,25 @@ static void run_pager(pager_t *pager) {
                 }
                 break;
                 
-            case 'q':  // Quit
+            case 'q':
             case 'Q':
                 quit = true;
                 break;
         }
     }
     
-    // Langsung clear dan banner dalam satu shot (60 newlines)
-    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-           "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-           "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    // Clear screen dengan banyak newlines
+    clear_screen();
     display_banner();
 }
 
-// Build help content into buffer
+// Build help content
 static char **build_help_content(uint8_t availability_mask, int *total_lines) {
     char **lines = (char **)malloc(MAX_PAGER_LINES * sizeof(char *));
     if (!lines) return NULL;
     
     int line_count = 0;
     
-    // Add header dengan format rapi
     lines[line_count] = strdup("================================================================================");
     if (lines[line_count]) line_count++;
     
@@ -904,7 +891,6 @@ static char **build_help_content(uint8_t availability_mask, int *total_lines) {
     lines[line_count] = strdup("");
     if (lines[line_count]) line_count++;
     
-    // Sort commands alphabetically
     const console_cmd_block *start = &__start_commands;
     const console_cmd_block *end = &__stop_commands;
     console_cmd_block *sorted = NULL;
@@ -921,7 +907,6 @@ static char **build_help_content(uint8_t availability_mask, int *total_lines) {
         }
     }
     
-    // Build content dengan format yang lebih rapi
     for (const console_cmd_block *block = start; block != end; block++) {
         const console_cmd *curr_cmd = block->list;
         bool has_printed_header = false;
@@ -989,17 +974,14 @@ static int cmd_help_impl(uint8_t availability_mask) {
         return 0;
     }
     
-    // Initialize pager
     pager_t pager;
     pager.lines = lines;
     pager.total_lines = total_lines;
     pager.current_line = 0;
     pager.lines_per_page = PAGER_LINES_PER_PAGE;
     
-    // Run pager
     run_pager(&pager);
     
-    // Cleanup
     for (int i = 0; i < total_lines; i++) {
         if (lines[i]) {
             free(lines[i]);
@@ -1027,12 +1009,8 @@ static int cmd_echo(int argc, const console_cmd_args *argv) {
 }
 
 static int cmd_clear(int argc, const console_cmd_args *argv) {
-    // Clear screen langsung tanpa delay
     clear_screen();
-    
-    // Tampilkan banner
     display_banner();
-    
     return NO_ERROR;
 }
 
@@ -1123,4 +1101,3 @@ static int cmd_test(int argc, const console_cmd_args *argv) {
     return 0;
 }
 #endif
-
