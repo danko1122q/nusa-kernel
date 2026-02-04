@@ -103,7 +103,7 @@ STATIC_COMMAND("help", "this list", &cmd_help)
 STATIC_COMMAND_MASKED("help", "this list", &cmd_help_panic, CMD_AVAIL_PANIC)
 STATIC_COMMAND("echo", "print arguments to console", &cmd_echo)
 STATIC_COMMAND("clear", "clear screen and show banner", &cmd_clear)
-#if LK_DEBUGLEVEL > 1
+#if NUSA_DEBUGLEVEL > 1
 STATIC_COMMAND("test", "test the command processor", &cmd_test)
 #if CONSOLE_ENABLE_HISTORY
 STATIC_COMMAND("history", "command history", &cmd_history)
@@ -758,22 +758,33 @@ static int compare_cmds(const void *cmd1, const void *cmd2) {
                   ((const console_cmd_block *)cmd2)->name);
 }
 
-// Display NUSA Kernel Console Banner
+
+// FIXED: Clear screen function - Menggunakan ASCII Form Feed
+static void clear_screen(void) {
+    // 1. Cetak 50-100 baris kosong untuk memastikan teks lama terdorong keluar 
+    // dari buffer tampilan QEMU.
+    for (int i = 0; i < 60; i++) {
+        printf("\n");
+    }
+
+    // 2. Gunakan Carriage Return untuk memastikan kursor balik ke paling kiri
+    printf("\r");
+
+    // Optional: Kamu bisa panggil fungsi print_banner() di sini 
+    // jika ingin shell-nya langsung muncul lagi setelah di-clear.
+    
+    fflush(stdout);
+}
+
+// FIXED: Display banner - hanya tampilkan sekali
 static void display_banner(void) {
     printf("\n");
     printf("================================================================================\n");
-    printf("                         NUSA Kernel Console Shell                                \n");
+    printf("                         NUSA Kernel Console Shell                             \n");
     printf("================================================================================\n");
     printf("\n");
     printf("  Type 'help' for available commands | 'clear' to clear screen\n");
     printf("\n");
-}
-
-// Clear screen - gunakan form feed (\f) atau kombinasi escape sequences
-static void clear_screen(void) {
-    // Coba beberapa metode untuk kompatibilitas maksimal
-    printf("\033c");  // Reset terminal (ESC c)
-    fflush(stdout);
 }
 
 // Pager structure
@@ -867,7 +878,7 @@ static void run_pager(pager_t *pager) {
         }
     }
     
-    // Clear screen dengan banyak newlines
+    // Clear screen setelah keluar dari pager
     clear_screen();
     display_banner();
 }
@@ -1090,7 +1101,7 @@ void panic_shell_start(void) {
     }
 }
 
-#if LK_DEBUGLEVEL > 1
+#if NUSA_DEBUGLEVEL > 1
 static int cmd_test(int argc, const console_cmd_args *argv) {
     int i;
 
