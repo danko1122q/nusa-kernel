@@ -1,0 +1,73 @@
+================================================================================
+NUSA (NUSA KERNEL) QEMU EXECUTION GUIDE
+================================================================================
+
+Target Binary: nusa.elf
+Build Path:    build-[target]/nusa.elf
+Memory:        512MB (Standardized)
+Acceleration:  KVM Enabled (where supported)
+
+--------------------------------------------------------------------------------
+GENERAL INSTRUCTIONS
+--------------------------------------------------------------------------------
+1. Compilation: Run 'make [target-name]' before execution.
+2. Exit Console: In -nographic mode, press 'CTRL+A' then 'X'.
+3. KVM Support: Ensure your host CPU supports virtualization and the 
+   kvm module is loaded. KVM is primarily for matching host/guest architectures.
+
+================================================================================
+1. X86 / PC TARGETS
+================================================================================
+
+[ pc-x86-test ] (32-bit)
+  Console: qemu-system-i386 -m 512 -kernel build-pc-x86-test/nusa.elf -nographic -serial mon:stdio -accel kvm
+  Graphic: qemu-system-i386 -m 512 -kernel build-pc-x86-test/nusa.elf -accel kvm
+
+[ pc-x86-64-test ] (64-bit)
+  Console: qemu-system-x86_64 -m 512 -kernel build-pc-x86-64-test/nusa.elf -nographic -serial mon:stdio -accel kvm
+  Graphic: qemu-system-x86_64 -m 512 -kernel build-pc-x86-64-test/nusa.elf -accel kvm
+
+[ pc-x86-legacy-test ]
+  Console: qemu-system-i386 -m 512 -kernel build-pc-x86-legacy-test/nusa.elf -nographic -serial mon:stdio -accel kvm
+  Graphic: qemu-system-i386 -m 512 -kernel build-pc-x86-legacy-test/nusa.elf -accel kvm
+
+
+================================================================================
+2. ARM VIRTUAL MACHINE TARGETS
+================================================================================
+
+[ qemu-virt-arm32-test ]
+  Console: qemu-system-arm -m 512 -machine virt -cpu cortex-a15 -kernel build-qemu-virt-arm32-test/nusa.elf -nographic -serial mon:stdio
+  Graphic: qemu-system-arm -m 512 -machine virt -cpu cortex-a15 -kernel build-qemu-virt-arm32-test/nusa.elf
+
+[ qemu-virt-arm64-test ]
+  Console: qemu-system-aarch64 -m 512 -machine virt -cpu cortex-a57 -kernel build-qemu-virt-arm64-test/nusa.elf -nographic -serial mon:stdio -accel kvm
+  Graphic: qemu-system-aarch64 -m 512 -machine virt -cpu cortex-a57 -kernel build-qemu-virt-arm64-test/nusa.elf -accel kvm
+
+
+================================================================================
+3. RISC-V VIRTUAL MACHINE TARGETS
+================================================================================
+
+[ qemu-virt-riscv32-test ]
+  Console: qemu-system-riscv32 -m 512 -machine virt -kernel build-qemu-virt-riscv32-test/nusa.elf -nographic -serial mon:stdio
+  Graphic: qemu-system-riscv32 -m 512 -machine virt -kernel build-qemu-virt-riscv32-test/nusa.elf
+
+[ qemu-virt-riscv64-test ]
+  Console: qemu-system-riscv64 -m 512 -machine virt -kernel build-qemu-virt-riscv64-test/nusa.elf -nographic -serial mon:stdio -accel kvm
+  Graphic: qemu-system-riscv64 -m 512 -machine virt -kernel build-qemu-virt-riscv64-test/nusa.elf -accel kvm
+
+[ qemu-virt-riscv64-supervisor-test ]
+  Console: qemu-system-riscv64 -m 512 -machine virt -kernel build-qemu-virt-riscv64-supervisor-test/nusa.elf -nographic -serial mon:stdio -accel kvm
+  Graphic: qemu-system-riscv64 -m 512 -machine virt -kernel build-qemu-virt-riscv64-supervisor-test/nusa.elf -accel kvm
+
+
+--------------------------------------------------------------------------------
+ARGUMENT DEFINITIONS
+--------------------------------------------------------------------------------
+-accel kvm       : Enables Kernel-based Virtual Machine (Hardware Acceleration).
+-nographic       : Runs QEMU purely in the terminal (Headless).
+-serial mon:stdio: Multiplexes the QEMU monitor and guest serial to terminal.
+-m 512           : Allocates 512 Megabytes of RAM.
+-kernel          : Directly boots the provided ELF file.
+================================================================================

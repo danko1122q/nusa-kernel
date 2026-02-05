@@ -82,7 +82,8 @@ static int cmd_ls(int argc, const console_cmd_args *argv) {
 
         // append our filename to the path
         tmppath[pathlen] = '\0';
-        strlcat(tmppath, "/", FS_MAX_PATH_LEN);
+        if (pathlen > 0 && tmppath[pathlen-1] != '/')
+            strlcat(tmppath, "/", FS_MAX_PATH_LEN);
         strlcat(tmppath, ent.name, FS_MAX_PATH_LEN);
 
         err = fs_open_file(tmppath, &handle);
@@ -104,10 +105,11 @@ static int cmd_ls(int argc, const console_cmd_args *argv) {
     }
 
     fs_close_dir(dhandle);
+    free(tmppath);
 
 err:
     free(path);
-    return status;;
+    return status;
 }
 
 static int cmd_cd(int argc, const console_cmd_args *argv) {
@@ -144,8 +146,9 @@ static int cmd_mkdir(int argc, const console_cmd_args *argv) {
     }
 
     char *path = malloc(FS_MAX_PATH_LEN);
+    prepend_cwd(path, FS_MAX_PATH_LEN, argv[1].str);
 
-    int status = fs_make_dir(prepend_cwd(path, FS_MAX_PATH_LEN, argv[1].str));
+    int status = fs_make_dir(path);
     if (status < 0) {
         printf("error %d making directory '%s'\n", status, path);
     }
@@ -165,7 +168,7 @@ static int cmd_mkfile(int argc, const console_cmd_args *argv) {
     prepend_cwd(path, FS_MAX_PATH_LEN, argv[1].str);
 
     filehandle *handle;
-    status_t status = fs_create_file(path, &handle, (argc >= 2) ? argv[2].u : 0);
+    status_t status = fs_create_file(path, &handle, (argc >= 3) ? argv[2].u : 0);
     if (status < 0) {
         printf("error %d making file '%s'\n", status, path);
         goto err;
@@ -191,9 +194,11 @@ static int cmd_rm(int argc, const console_cmd_args *argv) {
     status_t err = fs_remove_file(path);
     if (err < 0) {
         printf("error %d removing file '%s'\n", err, path);
+        free(path);
         return err;
     }
 
+    free(path);
     return 0;
 }
 
@@ -218,7 +223,6 @@ static int cmd_stat(int argc, const console_cmd_args *argv) {
     }
 
     status = fs_stat_file(handle, &stat);
-
     fs_close_file(handle);
 
     if (status < 0) {
@@ -229,7 +233,6 @@ static int cmd_stat(int argc, const console_cmd_args *argv) {
     printf("stat successful:\n");
     printf("\tis_dir: %d\n", stat.is_dir ? 1 : 0);
     printf("\tsize: %lld\n", stat.size);
-
 
 err:
     free(path);
@@ -262,7 +265,6 @@ static int cmd_cat(int argc, const console_cmd_args *argv) {
         for (int i = 0; i < read_len; i++) {
             putchar(buf[i]);
         }
-
         offset += read_len;
     }
 
@@ -278,6 +280,22 @@ static int cmd_df(int argc, const console_cmd_args *argv) {
     return NO_ERROR;
 }
 
+static int cmd_mount(int argc, const console_cmd_args *argv) {
+    if (argc < 3) {
+        printf("usage: %s <path> <fs_type>\n", argv[0].str);
+        printf("example: mount / memfs\n");
+        return -1;
+    }
+
+    status_t err = fs_mount(argv[1].str, argv[2].str, NULL);
+    if (err < 0) {
+        printf("error %d mounting %s at %s\n", err, argv[2].str, argv[1].str);
+    } else {
+        printf("successfully mounted %s at %s\n", argv[2].str, argv[1].str);
+    }
+    return err;
+}
+
 STATIC_COMMAND_START
 STATIC_COMMAND("ls", "dir listing", &cmd_ls)
 STATIC_COMMAND("cd", "change dir", &cmd_cd)
@@ -288,4 +306,5 @@ STATIC_COMMAND("rm", "remove file", &cmd_rm)
 STATIC_COMMAND("stat", "stat file", &cmd_stat)
 STATIC_COMMAND("cat", "cat file", &cmd_cat)
 STATIC_COMMAND("df", "list mounts", &cmd_df)
+STATIC_COMMAND("mount", "mount a filesystem", &cmd_mount)
 STATIC_COMMAND_END(fs_shell);
